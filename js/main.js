@@ -22,28 +22,25 @@
   addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  /* ---------- hero art: parts with data-track="ax,ay" lean toward the cursor ---------- */
-  const artSvg = $('#art');
-  const tracked = $$('[data-track]', artSvg).map(el => ({ el, a: el.dataset.track.split(',').map(Number) }));
+  /* ---------- hero photo: slow parallax against the cursor ---------- */
+  const heroImg = $('.hero .ph');
   let px = 0, py = 0, tx = 0, ty = 0;
-  addEventListener('pointermove', e => {
-    const r = artSvg.getBoundingClientRect();
-    const dx = e.clientX - (r.left + r.width / 2);
-    const dy = e.clientY - (r.top + r.height / 2);
-    const d = Math.hypot(dx, dy) || 1;
-    const k = Math.min(1, d / 300);
-    tx = dx / d * k;
-    ty = dy / d * k;
-  });
-  $('#artWrap').addEventListener('click', () => {
-    artSvg.classList.remove('poke'); void artSvg.getBBox(); artSvg.classList.add('poke');
-    SITE_toast(SITE.poke);
-  });
+  if (fine && !reduce && heroImg) {
+    heroImg.style.scale = '1.06';
+    addEventListener('pointermove', e => { tx = e.clientX / innerWidth - .5; ty = e.clientY / innerHeight - .5; });
+    (function loopPhoto() {
+      px += (tx - px) * .08; py += (ty - py) * .08;
+      heroImg.style.translate = `${(-px * 18).toFixed(1)}px ${(-py * 14).toFixed(1)}px`;
+      requestAnimationFrame(loopPhoto);
+    })();
+  }
+  const badge = $('.hero .badge');
+  if (badge) badge.addEventListener('click', () => SITE_toast(SITE.poke));
 
   /* floats drift away from cursor */
   const floats = $$('.float');
-  const art = $('.hero-art');
-  art.addEventListener('pointermove', e => {
+  const art = $('.hero-media') || $('.hero');
+  if (floats.length) art.addEventListener('pointermove', e => {
     if (reduce) return;
     floats.forEach((f, i) => {
       const r = f.getBoundingClientRect();
@@ -55,14 +52,8 @@
   });
   art.addEventListener('pointerleave', () => floats.forEach(f => (f.style.translate = '')));
 
-  (function loopArt() {
-    px += (tx - px) * .12; py += (ty - py) * .12;
-    tracked.forEach(({ el, a }) => el.setAttribute('transform', `translate(${(px * a[0]).toFixed(1)} ${(py * a[1]).toFixed(1)})`));
-    requestAnimationFrame(loopArt);
-  })();
-
-  /* sparkles trail over the hero */
-  if (fine && !reduce) {
+  /* sparkles trail over the hero — only for sticker themes */
+  if (fine && !reduce && floats.length) {
     let lastSpark = 0;
     $('.hero').addEventListener('pointermove', e => {
       const now = performance.now();
